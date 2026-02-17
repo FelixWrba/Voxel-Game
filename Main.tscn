@@ -1,12 +1,6 @@
-[gd_scene load_steps=5 format=3 uid="uid://cl4ouxfdpnse"]
+[gd_scene load_steps=3 format=3 uid="uid://cl4ouxfdpnse"]
 
 [ext_resource type="PackedScene" uid="uid://ba0qyfpsbmad8" path="res://level/Level.tscn" id="2_uu6xs"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_rxg2q"]
-size = Vector3(10, 1, 10)
-
-[sub_resource type="BoxMesh" id="BoxMesh_glv2v"]
-size = Vector3(10, 1, 10)
 
 [sub_resource type="Environment" id="Environment_uu6xs"]
 background_mode = 1
@@ -14,15 +8,6 @@ background_color = Color(0.23000002, 0.5251666, 1, 1)
 ambient_light_color = Color(1, 1, 1, 1)
 
 [node name="Main" type="Node3D"]
-
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -2.550578, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D"]
-shape = SubResource("BoxShape3D_rxg2q")
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="StaticBody3D"]
-mesh = SubResource("BoxMesh_glv2v")
 
 [node name="Level" parent="." instance=ExtResource("2_uu6xs")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6361598, 0)
