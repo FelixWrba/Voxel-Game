@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=3 uid="uid://ba0qyfpsbmad8"]
+
+[ext_resource type="Script" uid="uid://cjtp41pktr5uu" path="res://level/level.gd" id="1_xnnxx"]
+[ext_resource type="PackedScene" uid="uid://p88qei6rc6kd" path="res://player/Player.tscn" id="2_0fxik"]
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_xnnxx"]
+
+[node name="Level" type="Node3D"]
+script = ExtResource("1_xnnxx")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("ArrayMesh_xnnxx")
+
+[node name="Player" parent="." instance=ExtResource("2_0fxik")]
