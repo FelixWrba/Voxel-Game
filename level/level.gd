@@ -5,9 +5,10 @@ extends Node3D
 @export var cube_material: Material
 
 const CHUNK_SIZE = Vector3i(16, 64, 16)
-const RENDER_DISTANCE = 2
+const RENDER_DISTANCE = 4
 
 var chunks: Dictionary = {}
+var noise = FastNoiseLite.new()
 
 enum Voxel { AIR, GRASS, DIRT, STONE }
 
@@ -49,49 +50,34 @@ var face_normals: Dictionary[Face, Vector3] = {
 
 var face_colors: Dictionary[Face, Color] = {
 	Face.FRONT: Color.RED,
-	Face.BACK: Color.ORANGE,
-	Face.LEFT: Color.YELLOW,
+	Face.BACK: Color.YELLOW,
+	Face.LEFT: Color.RED,
 	Face.RIGHT: Color.GREEN,
-	Face.BOTTOM: Color.BLUE,
-	Face.TOP: Color.PURPLE,
+	Face.BOTTOM: Color.WHITE,
+	Face.TOP: Color.BLACK,
+}
+
+var voxel_colors: Dictionary[Voxel, Color] = {
+	Voxel.GRASS: Color.LIME_GREEN,
+	Voxel.DIRT: Color.SADDLE_BROWN,
+	Voxel.STONE: Color.DIM_GRAY
 }
 
 func _ready() -> void:
-	c_surface_array.resize(Mesh.ARRAY_MAX)
-	generate_mesh()
-	
-func generate_mesh() -> void:
-	add_face(Face.FRONT, Vector3.ZERO)
-	add_face(Face.BACK, Vector3.ZERO)
-	add_face(Face.LEFT, Vector3.ZERO)
-	add_face(Face.RIGHT, Vector3.ZERO)
-	add_face(Face.TOP, Vector3.ZERO)
-	add_face(Face.BOTTOM, Vector3.ZERO)
-	commit_mesh()
-
-func add_face(face: Face, position: Vector3) -> void:
-	var indices := face_indices[face]
-	for triangle in indices:
-		for index in triangle:
-			c_vertices.append(cube_vertices[index] + position)
-			c_normals.append(face_normals[face])
-			c_colors.append(face_colors[face])
-
-func commit_mesh() -> void:
-	c_surface_array[Mesh.ARRAY_VERTEX] = c_vertices
-	c_surface_array[Mesh.ARRAY_NORMAL] = c_normals
-	c_surface_array[Mesh.ARRAY_COLOR] = c_colors
-	mesh.mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, c_surface_array)
-	mesh.mesh.surface_set_material(0, cube_material)
+	noise.noise_type = FastNoiseLite.NoiseType.TYPE_SIMPLEX_SMOOTH
+	noise.seed = 83
+	noise.fractal_octaves = 4
+	noise.frequency = 0.02
 
 func _process(_delta: float) -> void:
 	var chunk_position := Vector3(
-		round(player.position.x / CHUNK_SIZE.x), 
-		round(player.position.y / CHUNK_SIZE.y),
-		round(player.position.z / CHUNK_SIZE.z)
+		floor((player.position.x) / CHUNK_SIZE.x), 
+		floor(player.position.y / CHUNK_SIZE.y),
+		floor((player.position.z) / CHUNK_SIZE.z)
 	)
 	remove_chunks(chunk_position)
 	spawn_chunks(chunk_position)
+	#create_chunk_mesh(create_chunk_data(Vector3.ZERO), Vector3.ZERO)
 	
 func remove_chunks(chunk_pos: Vector3):
 	var start_x = chunk_pos.x - RENDER_DISTANCE
@@ -108,26 +94,27 @@ func remove_chunks(chunk_pos: Vector3):
 			chunks.erase(chunk_x)
 	
 func spawn_chunks(chunk_pos: Vector3) -> void:
-	for x in range(chunk_pos.x - RENDER_DISTANCE, chunk_pos.x + RENDER_DISTANCE):
+	for x in range(chunk_pos.x - RENDER_DISTANCE, chunk_pos.x + RENDER_DISTANCE + 1):
 		if not chunks.has(x):
 			chunks[x] = {}
-		for z in range(chunk_pos.z - RENDER_DISTANCE, chunk_pos.z + RENDER_DISTANCE):
+		for z in range(chunk_pos.z - RENDER_DISTANCE, chunk_pos.z + RENDER_DISTANCE + 1):
 			if not chunks[x].has(z):
-				var new_chunk_data := create_chunk_data(chunk_pos)
-				var new_chunk_mesh := create_chunk_mesh(new_chunk_data, chunk_pos)
+				var new_pos = Vector3(x, 0, z)
+				var new_chunk_data := create_chunk_data(new_pos)
+				var new_chunk_mesh := create_chunk_mesh(new_chunk_data, new_pos)
 				chunks[x][z] = {
-					'mesh': new_chunk_mesh, 
+					'mesh': new_chunk_mesh,
 					'data': new_chunk_data
 				}
 
-func create_chunk_data(_chunk_pos: Vector3) -> Dictionary[Vector3, Voxel]:
+func create_chunk_data(chunk_pos: Vector3) -> Dictionary[Vector3, Voxel]:
 	var chunk: Dictionary[Vector3, Voxel] = {}
-	const GROUND_LEVEL = 10
 	const DIRT_HEIGHT = 4
 	
 	for x in range(CHUNK_SIZE.x):
 		for y in range(CHUNK_SIZE.y):
 			for z in range(CHUNK_SIZE.z):
+				var GROUND_LEVEL = round(5 * noise.get_noise_2d(x + chunk_pos.x * CHUNK_SIZE.x, z + chunk_pos.z * CHUNK_SIZE.z) + 10)
 				if y > GROUND_LEVEL:
 					chunk[Vector3(x, y, z)] = Voxel.AIR
 				elif y == GROUND_LEVEL:
@@ -155,17 +142,17 @@ func create_chunk_mesh(chunk_data: Dictionary[Vector3, Voxel], chunk_pos: Vector
 		)
 		
 		if is_air(chunk_data, pos + Vector3.UP):
-			add_face_to_arrays(Face.TOP, world_pos, vertices, normals, colors)
+			add_face_to_arrays(Face.TOP, world_pos, vertices, normals, colors, voxel_colors[voxel])
 		if is_air(chunk_data, pos + Vector3.DOWN):
-			add_face_to_arrays(Face.BOTTOM, world_pos, vertices, normals, colors)
+			add_face_to_arrays(Face.BOTTOM, world_pos, vertices, normals, colors, voxel_colors[voxel])
 		if is_air(chunk_data, pos + Vector3.LEFT):
-			add_face_to_arrays(Face.LEFT, world_pos, vertices, normals, colors)
+			add_face_to_arrays(Face.LEFT, world_pos, vertices, normals, colors, voxel_colors[voxel])
 		if is_air(chunk_data, pos + Vector3.RIGHT):
-			add_face_to_arrays(Face.RIGHT, world_pos, vertices, normals, colors)
-		if is_air(chunk_data, pos + Vector3.FORWARD):
-			add_face_to_arrays(Face.FRONT, world_pos, vertices, normals, colors)
+			add_face_to_arrays(Face.RIGHT, world_pos, vertices, normals, colors, voxel_colors[voxel])
 		if is_air(chunk_data, pos + Vector3.BACK):
-			add_face_to_arrays(Face.BACK, world_pos, vertices, normals, colors)
+			add_face_to_arrays(Face.FRONT, world_pos, vertices, normals, colors, voxel_colors[voxel])
+		if is_air(chunk_data, pos + Vector3.FORWARD):
+			add_face_to_arrays(Face.BACK, world_pos, vertices, normals, colors, voxel_colors[voxel])
 	
 	var surface_array := []
 	surface_array.resize(Mesh.ARRAY_MAX)
@@ -184,22 +171,23 @@ func create_chunk_mesh(chunk_data: Dictionary[Vector3, Voxel], chunk_pos: Vector
 	
 	return mesh_instance
 
-func is_air(chunk_data: Dictionary[Vector3, Voxel], position: Vector3) -> bool:
-	if not chunk_data.has(position):
+func is_air(chunk_data: Dictionary[Vector3, Voxel], pos: Vector3) -> bool:
+	if not chunk_data.has(pos):
 		return true
 	
-	return chunk_data[position] == Voxel.AIR
+	return chunk_data[pos] == Voxel.AIR
 
 func add_face_to_arrays(
-	face: Face, 
+	face: Face,
 	face_position: Vector3,
 	vertices: PackedVector3Array, 
 	normals: PackedVector3Array, 
 	colors: PackedColorArray,
+	face_color: Color,
 ) -> void:
 	var indices := face_indices[face]
 	for triangle in indices:
 		for index in triangle:
 			vertices.append(cube_vertices[index] + face_position)
 			normals.append(face_normals[face])
-			colors.append(face_colors[face])
+			colors.append(face_color)

@@ -8,7 +8,7 @@ var is_captured := true
 
 func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	get_viewport().debug_draw = Viewport.DEBUG_DRAW_WIREFRAME
+	#get_viewport().debug_draw = Viewport.DEBUG_DRAW_WIREFRAME
 
 func _physics_process(delta: float) -> void:
 	## Add the gravity.

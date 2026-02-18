@@ -16,3 +16,4 @@ cube_material = SubResource("StandardMaterial3D_0fxik")
 mesh = SubResource("ArrayMesh_xnnxx")
 
 [node name="Player" parent="." instance=ExtResource("2_0fxik")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 32, 0)
