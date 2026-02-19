@@ -4,13 +4,22 @@ extends Node3D
 @onready var mesh: MeshInstance3D = $Mesh
 @export var cube_material: Material
 
-const CHUNK_SIZE = Vector3i(16, 64, 16)
-const RENDER_DISTANCE = 4
+const CHUNK_SIZE = Vector3i(16, 128, 16)
+const RENDER_DISTANCE = 2
 
 var chunks: Dictionary = {}
 var noise = FastNoiseLite.new()
 
-enum Voxel { AIR, GRASS, DIRT, STONE }
+enum Voxel { AIR, GRASS, DIRT, STONE, GRAVEL, SAND, SNOW }
+
+var voxel_colors: Dictionary[Voxel, Color] = {
+	Voxel.GRASS: Color.LIME_GREEN,
+	Voxel.DIRT: Color.SADDLE_BROWN,
+	Voxel.STONE: Color.DIM_GRAY,
+	Voxel.GRAVEL: Color.DARK_GRAY,
+	Voxel.SAND: Color.LIGHT_YELLOW,
+	Voxel.SNOW: Color.SNOW,
+}
 
 var c_surface_array: Array = []
 var c_vertices = PackedVector3Array()
@@ -55,12 +64,6 @@ var face_colors: Dictionary[Face, Color] = {
 	Face.RIGHT: Color.GREEN,
 	Face.BOTTOM: Color.WHITE,
 	Face.TOP: Color.BLACK,
-}
-
-var voxel_colors: Dictionary[Voxel, Color] = {
-	Voxel.GRASS: Color.LIME_GREEN,
-	Voxel.DIRT: Color.SADDLE_BROWN,
-	Voxel.STONE: Color.DIM_GRAY
 }
 
 func _ready() -> void:
@@ -110,19 +113,42 @@ func spawn_chunks(chunk_pos: Vector3) -> void:
 func create_chunk_data(chunk_pos: Vector3) -> Dictionary[Vector3, Voxel]:
 	var chunk: Dictionary[Vector3, Voxel] = {}
 	const DIRT_HEIGHT = 4
+	const BASE_LEVEL = 32
+	const GRASS_LEVEL = 64
+	const STONE_LEVEL = 96
 	
 	for x in range(CHUNK_SIZE.x):
 		for y in range(CHUNK_SIZE.y):
 			for z in range(CHUNK_SIZE.z):
-				var GROUND_LEVEL = round(5 * noise.get_noise_2d(x + chunk_pos.x * CHUNK_SIZE.x, z + chunk_pos.z * CHUNK_SIZE.z) + 10)
-				if y > GROUND_LEVEL:
-					chunk[Vector3(x, y, z)] = Voxel.AIR
-				elif y == GROUND_LEVEL:
-					chunk[Vector3(x, y, z)] = Voxel.GRASS
-				elif y > GROUND_LEVEL - DIRT_HEIGHT:
-					chunk[Vector3(x, y, z)] = Voxel.DIRT
-				else:
-					chunk[Vector3(x, y, z)] = Voxel.STONE
+				var global_x = x + chunk_pos.x * CHUNK_SIZE.x
+				var global_z = z + chunk_pos.z * CHUNK_SIZE.z
+				var big = noise.get_noise_2d(global_x * 0.2, global_z * 0.2) * 64
+				var medium = noise.get_noise_2d(global_x * 0.5, global_z * 0.5) * 16
+				var small = noise.get_noise_2d(global_x, global_z) * 8
+				var GROUND_LEVEL = clamp(round(pow((big + medium + small + BASE_LEVEL), 1.1)), 4, 128)
+				var voxel: Voxel = Voxel.AIR
+				
+				if y == GROUND_LEVEL:
+					if GROUND_LEVEL < (BASE_LEVEL - 2):
+						voxel = Voxel.GRAVEL
+					elif GROUND_LEVEL < (BASE_LEVEL + 2):
+						voxel = Voxel.SAND
+					elif GROUND_LEVEL < GRASS_LEVEL:
+						voxel = Voxel.GRASS
+					elif GROUND_LEVEL < STONE_LEVEL:
+						voxel = Voxel.STONE
+					else:
+						voxel = Voxel.SNOW
+				elif y < GROUND_LEVEL:
+					if y < (BASE_LEVEL - 2):
+						voxel = Voxel.GRAVEL
+					elif y < (BASE_LEVEL + 2):
+						voxel = Voxel.SAND
+					elif y < GRASS_LEVEL and y > (GROUND_LEVEL - DIRT_HEIGHT):
+						voxel = Voxel.DIRT
+					else:
+						voxel = Voxel.STONE
+				chunk[Vector3(x, y, z)] = voxel
 	return chunk
 
 func create_chunk_mesh(chunk_data: Dictionary[Vector3, Voxel], chunk_pos: Vector3) -> MeshInstance3D:
@@ -167,7 +193,12 @@ func create_chunk_mesh(chunk_data: Dictionary[Vector3, Voxel], chunk_pos: Vector
 	
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.mesh = array_mesh
-	add_child(mesh_instance)
+	var static_body = StaticBody3D.new()
+	var collision_shape = CollisionShape3D.new()
+	collision_shape.shape = array_mesh.create_trimesh_shape()
+	static_body.add_child(mesh_instance)
+	static_body.add_child(collision_shape)
+	add_child(static_body)
 	
 	return mesh_instance
 

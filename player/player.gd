@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-const SPEED = 30.0
+const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
 const MOUSE_SENSITIVITY = 1.0
 
@@ -11,13 +11,13 @@ func _ready() -> void:
 	#get_viewport().debug_draw = Viewport.DEBUG_DRAW_WIREFRAME
 
 func _physics_process(delta: float) -> void:
-	## Add the gravity.
-	#if not is_on_floor():
-		#velocity += get_gravity() * delta
-#
-	## Handle jump.
-	#if Input.is_action_just_pressed("jump") and is_on_floor():
-		#velocity.y = JUMP_VELOCITY
+	# Add the gravity.
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+
+	# Handle jump.
+	if Input.is_action_pressed("jump") and is_on_floor():
+		velocity.y = JUMP_VELOCITY
 	
 	if Input.is_action_just_pressed('ui_cancel'):
 		if is_captured:
@@ -26,11 +26,6 @@ func _physics_process(delta: float) -> void:
 			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 		
 		is_captured = not is_captured
-		
-	if Input.is_action_pressed('jump'):
-		position.y += 5 * delta
-	if Input.is_action_pressed('ui_text_newline'):
-		position.y -= 5 * delta
 
 	# Get the input direction and handle the movement/deceleration.wwwwwwww
 	# As good practice, you should replace UI actions with custom gameplay actions.
