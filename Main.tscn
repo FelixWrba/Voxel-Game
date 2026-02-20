@@ -4,9 +4,17 @@
 
 [sub_resource type="Environment" id="Environment_uu6xs"]
 background_mode = 1
-background_color = Color(0.23000002, 0.5251666, 1, 1)
+background_color = Color(0.25, 0.7499999, 1, 1)
+ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.0
+ambient_light_energy = 0.2
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.25, 0.7499999, 1, 1)
+fog_density = 1.0
+fog_depth_curve = 3.0
+fog_depth_begin = 64.0
+fog_depth_end = 128.0
 
 [node name="Main" type="Node3D"]
 
