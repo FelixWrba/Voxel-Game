@@ -1,17 +1,25 @@
-[gd_scene load_steps=3 format=3 uid="uid://cl4ouxfdpnse"]
+[gd_scene load_steps=6 format=3 uid="uid://cl4ouxfdpnse"]
 
+[ext_resource type="Texture2D" uid="uid://d0ng3x2vbrp61" path="res://assets/skybox.png" id="2_r0du0"]
 [ext_resource type="PackedScene" uid="uid://ba0qyfpsbmad8" path="res://level/Level.tscn" id="2_uu6xs"]
 
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_cm0pq"]
+panorama = ExtResource("2_r0du0")
+
+[sub_resource type="Sky" id="Sky_fos0i"]
+sky_material = SubResource("PanoramaSkyMaterial_cm0pq")
+
 [sub_resource type="Environment" id="Environment_uu6xs"]
-background_mode = 1
-background_color = Color(0.25, 0.7499999, 1, 1)
+background_mode = 2
+sky = SubResource("Sky_fos0i")
 ambient_light_source = 2
 ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.2
 fog_enabled = true
 fog_mode = 1
-fog_light_color = Color(0.25, 0.7499999, 1, 1)
+fog_light_color = Color(1, 1, 1, 1)
 fog_density = 1.0
+fog_sky_affect = 0.0
 fog_depth_curve = 3.0
 fog_depth_begin = 64.0
 fog_depth_end = 128.0
@@ -25,4 +33,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6361598, 0)
 environment = SubResource("Environment_uu6xs")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.70710677, -0.6123724, -0.3535534, 0, -0.50000006, 0.8660254, -0.70710677, -0.6123724, -0.3535534, 0, 10, 0)
+transform = Transform3D(0.70710677, -0.6123724, -0.3535534, 0, -0.50000006, 0.8660254, -0.70710677, -0.6123724, -0.3535534, 0, 128, 0)
+shadow_enabled = true
+shadow_opacity = 0.8
+directional_shadow_mode = 0
+directional_shadow_max_distance = 64.0
+directional_shadow_pancake_size = 12.0

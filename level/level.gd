@@ -5,7 +5,7 @@ extends Node3D
 @export var cube_material: Material
 
 const CHUNK_SIZE = Vector3i(16, 128, 16)
-const RENDER_DISTANCE = 4
+const RENDER_DISTANCE = 2
 
 var previous_chunk_position: Vector3 = Vector3.ZERO
 
@@ -29,14 +29,14 @@ var voxel_colors: Dictionary[Voxel, Color] = {
 }
 
 var cube_vertices: Array[Vector3] = [
-	Vector3(-0.5, -0.5, 0.5),
-	Vector3(0.5, -0.5, 0.5),
-	Vector3(0.5, -0.5, -0.5),
-	Vector3(-0.5, -0.5, -0.5),
-	Vector3(-0.5, 0.5, 0.5),
-	Vector3(0.5, 0.5, 0.5),
-	Vector3(0.5, 0.5, -0.5),
-	Vector3(-0.5, 0.5, -0.5),
+	Vector3(0, 0, 1),
+	Vector3(1, 0, 1),
+	Vector3(1, 0, 0),
+	Vector3(0, 0, 0),
+	Vector3(0, 1, 1),
+	Vector3(1, 1, 1),
+	Vector3(1, 1, 0),
+	Vector3(0, 1, 0),
 ]
 
 enum Face { BOTTOM, FRONT, RIGHT, TOP, LEFT, BACK }
@@ -76,14 +76,12 @@ func _ready() -> void:
 	thread.start(_thread_loop)
 
 func _process(_delta: float) -> void:
-	var chunk_position := Vector3(
-		floor((player.position.x) / CHUNK_SIZE.x), 
-		0,
-		floor((player.position.z) / CHUNK_SIZE.z)
-	)
+	var chunk_position := global_to_chunk_pos(player.position)
+	
 	remove_chunks(chunk_position)
 	spawn_chunks(chunk_position, previous_chunk_position)
 	previous_chunk_position = chunk_position
+	
 	
 func remove_chunks(chunk_pos: Vector3):
 	var start_x = chunk_pos.x - RENDER_DISTANCE
@@ -231,9 +229,9 @@ func _create_chunk_mesh(chunk_pos: Vector3, data: Dictionary[Vector3, Voxel], ch
 	var static_body = StaticBody3D.new()
 	var collision_shape = CollisionShape3D.new()
 	collision_shape.shape = array_mesh.create_trimesh_shape()
-	static_body.add_child(mesh_instance)
 	static_body.add_child(collision_shape)
-	add_child(static_body)
+	static_body.add_child(mesh_instance)
+	add_child(static_body) 
 	
 	if not chunks.has(chunk_pos.x):
 		chunks[chunk_pos.x] = {}
@@ -264,3 +262,64 @@ func add_face_to_arrays(
 			vertices.append(cube_vertices[index] + face_position)
 			normals.append(face_normals[face])
 			colors.append(face_color)
+
+
+func _on_player_request_destroy(block: Vector3, normal: Vector3) -> void:
+	var chunk_pos := global_to_chunk_pos(block)
+	var block_pos := Vector3(
+		floor(block.x - (chunk_pos.x * CHUNK_SIZE.x) - (normal.x * 0.5)),
+		floor(block.y - 2 - (normal.y * 0.5)),
+		floor(block.z - (chunk_pos.z * CHUNK_SIZE.z) - (normal.z * 0.5)),
+	)
+	chunks[chunk_pos.x][chunk_pos.z].data[block_pos] = Voxel.AIR
+	var data = chunks[chunk_pos.x][chunk_pos.z].data
+	var arrays = create_chunk_arrays(data, chunk_pos)
+	update_chunk_mesh(chunk_pos, data, arrays)
+	
+func _on_player_request_place(block: Vector3, normal: Vector3) -> void:
+	var chunk_pos := global_to_chunk_pos(block)
+	var block_pos := Vector3(
+		floor(block.x - (chunk_pos.x * CHUNK_SIZE.x) + (normal.x * 0.5)),
+		floor(block.y - 2 + (normal.y * 0.5)),
+		floor(block.z - (chunk_pos.z * CHUNK_SIZE.z) + (normal.z * 0.5)),
+	)
+	chunks[chunk_pos.x][chunk_pos.z].data[block_pos] = Voxel.SNOW
+	var data = chunks[chunk_pos.x][chunk_pos.z].data
+	var arrays = create_chunk_arrays(data, chunk_pos)
+	update_chunk_mesh(chunk_pos, data, arrays)
+
+func update_chunk_mesh(chunk_pos: Vector3, data: Dictionary[Vector3, Voxel], chunk_arrays: Dictionary):
+	if not chunks[chunk_pos.x][chunk_pos.z]:
+		return
+	var surface_array := []
+	surface_array.resize(Mesh.ARRAY_MAX)
+	
+	surface_array[Mesh.ARRAY_VERTEX] = chunk_arrays.vertices
+	surface_array[Mesh.ARRAY_NORMAL] = chunk_arrays.normals
+	surface_array[Mesh.ARRAY_COLOR] = chunk_arrays.colors
+	
+	var array_mesh = ArrayMesh.new()
+	array_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, surface_array)
+	array_mesh.surface_set_material(0, cube_material)
+	
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.mesh = array_mesh
+	var static_body = StaticBody3D.new()
+	var collision_shape = CollisionShape3D.new()
+	collision_shape.shape = array_mesh.create_trimesh_shape()
+	static_body.add_child(collision_shape)
+	static_body.add_child(mesh_instance)
+	remove_child(chunks[chunk_pos.x][chunk_pos.z].mesh)
+	add_child(static_body) 
+	
+	chunks[chunk_pos.x][chunk_pos.z] = {
+		'mesh': static_body,
+		'data': data,
+	}
+
+func global_to_chunk_pos(global_pos: Vector3) -> Vector3:
+	return Vector3(
+		floor((global_pos.x) / CHUNK_SIZE.x), 
+		0,
+		floor((global_pos.z) / CHUNK_SIZE.z)
+	)

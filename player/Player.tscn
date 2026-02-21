@@ -12,10 +12,34 @@ script = ExtResource("1_ulp21")
 shape = SubResource("CapsuleShape3D_ehsmr")
 
 [node name="Head" type="Node3D" parent="."]
-
-[node name="Camera3D" type="Camera3D" parent="Head"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
 
-[node name="InfoLabel" type="Label" parent="Head/Camera3D"]
-offset_right = 40.0
-offset_bottom = 23.0
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="Control" type="Control" parent="Head/Camera3D"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Crosshair" type="CenterContainer" parent="Head/Camera3D/Control"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="InfoLabel" type="Label" parent="Head/Camera3D/Control"]
+layout_mode = 1
+offset_right = 178.0
+offset_bottom = 102.0
+
+[node name="RayCast3D" type="RayCast3D" parent="Head"]
+target_position = Vector3(0, 0, -3)
+
+[connection signal="draw" from="Head/Camera3D/Control/Crosshair" to="." method="_on_crosshair_draw"]
